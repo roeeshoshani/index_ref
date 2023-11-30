@@ -23,6 +23,13 @@ impl IndexRefBuf {
     }
     /// creates an index reference to the given index in the buffer.
     pub fn create_index_ref(&mut self, index: usize) -> IndexRef {
+        if index > self.len() {
+            panic!(
+                "index {} for creating an index ref is out of bound of buffer with length {}",
+                index,
+                self.len()
+            );
+        }
         let ref_index = self.references.len();
         self.references.push(index);
         IndexRef { ref_index }
@@ -32,18 +39,28 @@ impl IndexRefBuf {
         self.references[index_ref.ref_index]
     }
     /// push the given element to the buffer.
+    /// this does not update any of the index refs, even if they point to the end of the buffer.
+    /// if you want to insert to the end of the buffer while updating index refs that point to the end, use one of the insertion
+    /// functions, or the splice function.
     pub fn push(&mut self, value: u8) {
         self.buf.push(value);
     }
     /// extend the buffer using the content of the given slice.
+    /// this does not update any of the index refs, even if they point to the end of the buffer.
+    /// if you want to insert to the end of the buffer while updating index refs that point to the end, use one of the insertion
+    /// functions, or the splice function.
     pub fn extend_from_slice(&mut self, other: &[u8]) {
         self.buf.extend_from_slice(other);
     }
     /// appends the given vector to the buffer.
+    /// this does not update any of the index refs, even if they point to the end of the buffer.
+    /// if you want to insert to the end of the buffer while updating index refs that point to the end, use one of the insertion
+    /// functions, or the splice function.
     pub fn append(&mut self, other: &mut Vec<u8>) {
         self.buf.append(other)
     }
     /// inserts an element into the buffer at the given index.
+    /// this updates all of the index refs that point to or after the given index.
     pub fn insert(&mut self, index: usize, element: u8) {
         self.buf.insert(index, element);
         for reference in &mut self.references {
@@ -53,6 +70,7 @@ impl IndexRefBuf {
         }
     }
     /// inserts a slice into the buffer at the given index.
+    /// this updates all of the index refs that point to or after the given index.
     pub fn insert_slice(&mut self, index: usize, elements: &[u8]) {
         self.buf.splice(index..index, elements.iter().copied());
         for reference in &mut self.references {
@@ -62,6 +80,7 @@ impl IndexRefBuf {
         }
     }
     /// replaces the given range with the given content.
+    /// this updates all of the index refs that point to or after the given range start index.
     pub fn splice<R, I, T>(
         &mut self,
         range: R,
